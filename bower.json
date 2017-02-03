@@ -1,0 +1,23 @@
+{
+  "name": "purescript-hyper-ajax-client",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/owickstrom/hyper-ajax-client.git"
+  },
+  "license": "MPL-2.0",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "output"
+  ],
+  "dependencies": {
+    "purescript-prelude": "^2.3.0",
+    "purescript-console": "^2.0.0",
+    "purescript-hyper": "^0.1.5",
+    "purescript-affjax": "^3.0.2"
+  },
+  "devDependencies": {
+    "purescript-psci-support": "^2.0.0"
+  }
+}
