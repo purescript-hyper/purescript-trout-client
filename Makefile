@@ -1,6 +1,6 @@
-.PHONY: output/bundle.js
-output/bundle.js:
+.PHONY: example/public/bundle.js
+example/public/bundle.js:
 	pulp browserify --main Example.Client -I example -t $@
 
-run-example: output/bundle.js
+run-example: example/public/bundle.js
 	pulp -w run --main Example.Server -I example

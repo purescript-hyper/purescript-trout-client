@@ -13,7 +13,7 @@ import Control.Monad.Reader.Trans (runReaderT)
 import Data.Array (find, (..))
 import Data.Maybe (Maybe(..), maybe)
 import Data.MediaType.Common (textHTML)
-import Example.Site (Home(..), Task(..), TaskId, site)
+import Example.Site (Task(..), TaskId, site)
 import Hyper.Core (Port(Port), closeHeaders, fallbackTo, try, writeStatus)
 import Hyper.Node.FileServer (fileServer)
 import Hyper.Node.Server (defaultOptions, runServer)
@@ -26,9 +26,6 @@ import Node.FS (FS)
 import Node.HTTP (HTTP)
 
 type AppM e a = ExceptT RoutingError (ReaderT (Array Task) (Aff e)) a
-
-home :: forall e. AppM e Home
-home = pure Home
 
 allTasks :: forall e. AppM e (Array Task)
 allTasks = ask
@@ -48,7 +45,7 @@ main =
   where
     tasks = (map (\i -> Task i ("Task #" <> show i)) (1..10))
 
-    siteRouter = router site (home :<|> (allTasks :<|> getTask)) onRoutingError
+    siteRouter = router site (allTasks :<|> getTask) onRoutingError
 
     onListening (Port port) = log ("Listening on http://localhost:" <> show port)
     onRequestError err = log ("Request failed: " <> show err)
@@ -60,7 +57,7 @@ main =
         >=> respond "<h1>Not Found</h1>"
 
     onRoutingError status msg
-      | status == statusNotFound = try (fileServer "output")
+      | status == statusNotFound = try (fileServer "example/public")
                                    # fallbackTo notFound
 
       | otherwise =

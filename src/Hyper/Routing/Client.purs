@@ -1,4 +1,4 @@
-module Hyper.Routing.Client
+module Hyper.Routing.XHR
        ( class HasClients
        , getClients
        , asClients

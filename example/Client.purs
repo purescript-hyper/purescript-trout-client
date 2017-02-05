@@ -1,23 +1,63 @@
+-- Based on https://github.com/alexmingoia/purescript-pux/blob/master/examples/ajax/Todos.purs
 module Example.Client where
 
-import Prelude
-import Control.Monad.Aff (launchAff)
-import Control.Monad.Aff.Console (CONSOLE, log)
+import Prelude hiding (div)
 import Control.Monad.Eff (Eff)
-import Control.Monad.Eff.Exception (EXCEPTION)
+import Example.Site (Task(..), site)
 import Hyper.Routing ((:<|>))
-import Hyper.Routing.Client (asClients)
+import Hyper.Routing.XHR (asClients)
 import Network.HTTP.Affjax (AJAX)
+import Pux (CoreEffects, EffModel, noEffects, renderToDOM, start)
+import Pux.Html (Html, button, div, h1, li, ol, text)
+import Pux.Html.Attributes (className, key)
+import Pux.Html.Events (onClick)
 
-import Example.Site (site)
+data Action = RequestTasks
+            | ReceiveTasks (Array Task)
 
-main :: forall e. Eff (console :: CONSOLE, ajax :: AJAX, err :: EXCEPTION | e) Unit
-main =
-  void $ launchAff $ do
-    case asClients site of
-      _ :<|> (allTasks :<|> getTask) -> do
-        log "Getting tasks..."
-        allTasks >>= log <<< show
+type State =
+  { tasks :: Array Task
+  , status :: String
+  }
 
-        log "Getting task with ID: 2 ..."
-        getTask 2 >>= log <<< show
+init :: State
+init = { tasks: [], status: "Nothing loaded from server yet" }
+
+update :: Action -> State -> EffModel State Action (ajax :: AJAX)
+update (ReceiveTasks tasks) state =
+  noEffects $ state { tasks = tasks, status = "Tasks" }
+update (RequestTasks) state =
+  -- This is where the nice things are going on. Automatically, type-safe
+  -- XHR clients. YEY!
+  case asClients site of
+    allTasks :<|> _ ->
+      { state: state { status = "Fetching tasks..." }
+      , effects: [ ReceiveTasks <$> allTasks
+                 ]
+      }
+
+view :: State -> Html Action
+view state =
+  div
+    []
+    [ h1 [] [ text state.status ]
+    , div
+        []
+        [ button [ onClick (const RequestTasks) ] [ text "Fetch Tasks" ]
+        , ol [] $ map task state.tasks
+        ]
+    ]
+
+task :: Task -> Html Action
+task (Task id title) =
+  li [ key (show id), className "task" ] [ text title ]
+
+main :: Eff (CoreEffects (ajax :: AJAX)) Unit
+main = do
+  app <- start
+    { initialState: init
+    , update: update
+    , view: view
+    , inputs: [] }
+
+  renderToDOM "#app" app.html
