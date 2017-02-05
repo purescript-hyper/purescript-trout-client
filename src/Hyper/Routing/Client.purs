@@ -5,6 +5,7 @@ module Hyper.Routing.Client
        ) where
 
 import Prelude
+import Data.HTTP.Method as Method
 import Control.Monad.Aff (Aff)
 import Control.Monad.Eff.Exception (error)
 import Control.Monad.Except.Trans (throwError)
@@ -14,6 +15,7 @@ import Data.Either (Either(..))
 import Data.Foldable (foldl)
 import Data.String (joinWith)
 import Data.Symbol (class IsSymbol, SProxy(..), reflectSymbol)
+import Hyper.HTML (HTML)
 import Hyper.Routing (type (:>), type (:<|>), (:<|>), Capture, CaptureAll, Handler, Lit)
 import Hyper.Routing.PathPiece (class ToPathPiece, toPathPiece)
 import Network.HTTP.Affjax (AJAX, AffjaxRequest, affjax, defaultRequest)
@@ -51,17 +53,36 @@ instance hasClientsCaptureAll :: (HasClients sub subMk, IsSymbol c, ToPathPiece 
   getClients _ req xs =
     getClients (Proxy :: Proxy sub) (foldl (flip appendSegment) req (map toPathPiece xs))
 
-instance hasClientsHandlerJson :: (DecodeJson b)
-                                  => HasClients (Handler "GET" Json b) (Aff (ajax :: AJAX | e) b) where
+toMethod :: forall m. IsSymbol m =>
+            SProxy m
+         -> Either Method.Method Method.CustomMethod
+toMethod p = Method.fromString (reflectSymbol p)
+
+instance hasClientsHandlerJson :: (DecodeJson b, IsSymbol method)
+                                  => HasClients (Handler method Json b) (Aff (ajax :: AJAX | e) b) where
   getClients _ req = do
-    r <- affjax (toAffjaxRequest req)
+    r <- toAffjaxRequest req
+         # _ { method = toMethod (SProxy :: SProxy method) }
+         # affjax
     case decodeJson r.response of
       Left err -> throwError (error err)
       Right x -> pure x
 
-instance hasClientsHandlerString :: HasClients (Handler "GET" String String) (Aff (ajax :: AJAX | e) String) where
+instance hasClientsHandlerHTMLString :: IsSymbol method
+                                        => HasClients (Handler method HTML a) (Aff (ajax :: AJAX | e) String) where
   getClients _ req =
-    _.response <$>  affjax (toAffjaxRequest req)
+    toAffjaxRequest req
+    # _ { method = toMethod (SProxy :: SProxy method) }
+    # affjax
+    # map _.response
+
+instance hasClientsHandlerString :: IsSymbol method
+                                    => HasClients (Handler method String String) (Aff (ajax :: AJAX | e) String) where
+  getClients _ req =
+    toAffjaxRequest req
+    # _ { method = toMethod (SProxy :: SProxy method) }
+    # affjax
+    # map _.response
 
 instance hasClientsAlt :: (HasClients c1 mk1, HasClients c2 mk2)
                           => HasClients (c1 :<|> c2) (mk1 :<|> mk2) where
