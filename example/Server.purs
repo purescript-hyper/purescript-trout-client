@@ -1,11 +1,11 @@
 module Example.Server where
 
 import Prelude
+import Control.IxMonad ((:*>))
 import Control.Monad.Aff (Aff)
 import Control.Monad.Aff.AVar (AVAR)
 import Control.Monad.Eff (Eff)
-import Control.Monad.Eff.Console (log, CONSOLE)
-import Control.Monad.Eff.Exception (EXCEPTION)
+import Control.Monad.Eff.Console (CONSOLE)
 import Control.Monad.Error.Class (throwError)
 import Control.Monad.Except (ExceptT)
 import Control.Monad.Reader (ReaderT, ask)
@@ -14,10 +14,9 @@ import Data.Array (find, (..))
 import Data.Maybe (Maybe(..), maybe)
 import Data.MediaType.Common (textHTML)
 import Example.Site (Task(..), TaskId, site)
-import Hyper.Core (Port(Port), closeHeaders, fallbackTo, try, writeStatus)
 import Hyper.Node.FileServer (fileServer)
-import Hyper.Node.Server (defaultOptions, runServer)
-import Hyper.Response (contentType, respond)
+import Hyper.Node.Server (defaultOptionsWithLogging, runServer')
+import Hyper.Response (closeHeaders, contentType, respond, writeStatus)
 import Hyper.Routing ((:<|>))
 import Hyper.Routing.Router (RoutingError(..), router)
 import Hyper.Status (statusNotFound)
@@ -39,29 +38,25 @@ getTask taskId =
                                      , message: Just "Task not found."
                                      })
 
-main :: forall e. Eff (http :: HTTP, console :: CONSOLE, err :: EXCEPTION, avar :: AVAR, buffer :: BUFFER, fs :: FS | e) Unit
+main :: forall e. Eff (http :: HTTP, console :: CONSOLE, avar :: AVAR, buffer :: BUFFER, fs :: FS | e) Unit
 main =
-  runServer defaultOptions onListening onRequestError {} (siteRouter >>> flip runReaderT tasks)
+  runServer' defaultOptionsWithLogging {} (flip runReaderT tasks) siteRouter
   where
     tasks = (map (\i -> Task i ("Task #" <> show i)) (1..10))
 
     siteRouter = router site (allTasks :<|> getTask) onRoutingError
 
-    onListening (Port port) = log ("Listening on http://localhost:" <> show port)
-    onRequestError err = log ("Request failed: " <> show err)
-
     notFound =
       writeStatus statusNotFound
-        >=> contentType textHTML
-        >=> closeHeaders
-        >=> respond "<h1>Not Found</h1>"
+        :*> contentType textHTML
+        :*> closeHeaders
+        :*> respond "<h1>Not Found</h1>"
 
     onRoutingError status msg
-      | status == statusNotFound = try (fileServer "example/public")
-                                   # fallbackTo notFound
+      | status == statusNotFound = fileServer "example/public" notFound
 
       | otherwise =
         writeStatus status
-        >=> contentType textHTML
-        >=> closeHeaders
-        >=> respond (maybe "" id msg)
+        :*> contentType textHTML
+        :*> closeHeaders
+        :*> respond (maybe "" id msg)

@@ -9,14 +9,15 @@ import Data.HTTP.Method as Method
 import Control.Monad.Aff (Aff)
 import Control.Monad.Eff.Exception (error)
 import Control.Monad.Except.Trans (throwError)
-import Data.Argonaut (class DecodeJson, Json, decodeJson)
+import Data.Argonaut (class DecodeJson, decodeJson)
 import Data.Array (singleton)
 import Data.Either (Either(..))
 import Data.Foldable (foldl)
 import Data.String (joinWith)
 import Data.Symbol (class IsSymbol, SProxy(..), reflectSymbol)
-import Hyper.HTML (HTML)
 import Hyper.Routing (type (:>), type (:<|>), (:<|>), Capture, CaptureAll, Handler, Lit)
+import Hyper.Routing.ContentType.HTML (HTML)
+import Hyper.Routing.ContentType.JSON (JSON)
 import Hyper.Routing.PathPiece (class ToPathPiece, toPathPiece)
 import Network.HTTP.Affjax (AJAX, AffjaxRequest, affjax, defaultRequest)
 import Type.Proxy (Proxy(..))
@@ -59,7 +60,7 @@ toMethod :: forall m. IsSymbol m =>
 toMethod p = Method.fromString (reflectSymbol p)
 
 instance hasClientsHandlerJson :: (DecodeJson b, IsSymbol method)
-                                  => HasClients (Handler method Json b) (Aff (ajax :: AJAX | e) b) where
+                                  => HasClients (Handler method JSON b) (Aff (ajax :: AJAX | e) b) where
   getClients _ req = do
     r <- toAffjaxRequest req
          # _ { method = toMethod (SProxy :: SProxy method) }

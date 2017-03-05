@@ -1,9 +1,10 @@
 module Example.Site where
 
 import Prelude
-import Data.Argonaut (class DecodeJson, class EncodeJson, Json, gDecodeJson, gEncodeJson)
+import Data.Argonaut (class DecodeJson, class EncodeJson, gDecodeJson, gEncodeJson)
 import Data.Generic (class Generic, gShow)
 import Hyper.Routing (type (:/), type (:<|>), type (:>), Capture)
+import Hyper.Routing.ContentType.JSON (JSON)
 import Hyper.Routing.Method (Get)
 import Type.Proxy (Proxy(..))
 
@@ -18,8 +19,8 @@ instance encodeJsonTask :: EncodeJson Task where encodeJson = gEncodeJson
 instance decodeJsonTask :: DecodeJson Task where decodeJson = gDecodeJson
 
 type Site =
-  "tasks" :/ (Get Json (Array Task)
-              :<|> Capture "id" TaskId :> Get Json Task)
+  "tasks" :/ (Get JSON (Array Task)
+              :<|> Capture "id" TaskId :> Get JSON Task)
 
 site :: Proxy Site
 site = Proxy
