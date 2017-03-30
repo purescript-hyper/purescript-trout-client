@@ -1,4 +1,4 @@
-module Example.Server where
+module Server where
 
 import Prelude
 import Control.IxMonad ((:*>))
@@ -13,7 +13,6 @@ import Control.Monad.Reader.Trans (runReaderT)
 import Data.Array (find, (..))
 import Data.Maybe (Maybe(..), maybe)
 import Data.MediaType.Common (textHTML)
-import Example.Site (Task(..), TaskId, site)
 import Hyper.Node.FileServer (fileServer)
 import Hyper.Node.Server (defaultOptionsWithLogging, runServer')
 import Hyper.Response (closeHeaders, contentType, respond, writeStatus)
@@ -23,6 +22,7 @@ import Hyper.Status (statusNotFound)
 import Node.Buffer (BUFFER)
 import Node.FS (FS)
 import Node.HTTP (HTTP)
+import Site (Task(..), TaskId, site)
 
 type AppM e a = ExceptT RoutingError (ReaderT (Array Task) (Aff e)) a
 
@@ -53,7 +53,7 @@ main =
         :*> respond "<h1>Not Found</h1>"
 
     onRoutingError status msg
-      | status == statusNotFound = fileServer "example/public" notFound
+      | status == statusNotFound = fileServer "public" notFound
 
       | otherwise =
         writeStatus status

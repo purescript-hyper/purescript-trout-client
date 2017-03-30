@@ -1,0 +1,26 @@
+{
+  "name": "purescript-hyper-routing-xhr-exapple",
+  "description": "Showcasing the purescript-hyper-routing-xhr package",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/owickstrom/purescript-hyper-routing-xhr.git"
+  },
+  "license": "MPL-2.0",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "output"
+  ],
+  "dependencies": {
+    "purescript-prelude": "^2.3.0",
+    "purescript-hyper": "^0.4.1",
+    "purescript-hyper-routing-xhr": "^0.5.0",
+    "purescript-hyper-routing-server": "^0.6.0",
+    "purescript-affjax": "^3.0.2",
+    "purescript-pux": "^7.0.0"
+  },
+  "devDependencies": {
+    "purescript-psci-support": "^2.0.0"
+  }
+}

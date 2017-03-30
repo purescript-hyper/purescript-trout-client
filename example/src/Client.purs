@@ -1,9 +1,8 @@
 -- Based on https://github.com/alexmingoia/purescript-pux/blob/master/examples/ajax/Todos.purs
-module Example.Client where
+module Client where
 
 import Prelude hiding (div)
 import Control.Monad.Eff (Eff)
-import Example.Site (Task(..), site)
 import Hyper.Routing ((:<|>))
 import Hyper.Routing.XHR (asClients)
 import Network.HTTP.Affjax (AJAX)
@@ -11,6 +10,7 @@ import Pux (CoreEffects, EffModel, noEffects, renderToDOM, start)
 import Pux.Html (Html, button, div, h1, li, ol, text)
 import Pux.Html.Attributes (className, key)
 import Pux.Html.Events (onClick)
+import Site (Task(..), site)
 
 data Action = RequestTasks
             | ReceiveTasks (Array Task)

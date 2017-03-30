@@ -1,6 +1,8 @@
 module Hyper.Routing.XHR
        ( class HasClients
        , getClients
+       , class HasMethodClients
+       , getMethodClients
        , asClients
        ) where
 
@@ -15,7 +17,7 @@ import Data.Either (Either(..))
 import Data.Foldable (foldl)
 import Data.String (joinWith)
 import Data.Symbol (class IsSymbol, SProxy(..), reflectSymbol)
-import Hyper.Routing (type (:>), type (:<|>), (:<|>), Capture, CaptureAll, Handler, Lit)
+import Hyper.Routing (type (:>), type (:<|>), (:<|>), Capture, CaptureAll, Resource, Method, Lit)
 import Hyper.Routing.ContentType.HTML (HTML)
 import Hyper.Routing.ContentType.JSON (JSON)
 import Hyper.Routing.PathPiece (class ToPathPiece, toPathPiece)
@@ -37,6 +39,11 @@ toAffjaxRequest req = defaultRequest { url = "/" <> joinWith "/" req.path }
 class HasClients r mk | r -> mk where
   getClients :: Proxy r -> RequestBuilder -> mk
 
+instance hasClientsAlt :: (HasClients c1 mk1, HasClients c2 mk2)
+                          => HasClients (c1 :<|> c2) (mk1 :<|> mk2) where
+  getClients _ req =
+    getClients (Proxy :: Proxy c1) req :<|> getClients (Proxy :: Proxy c2) req
+
 instance hasClientsLit :: (HasClients sub subMk, IsSymbol lit)
                           => HasClients (Lit lit :> sub) subMk where
   getClients _ req =
@@ -54,14 +61,31 @@ instance hasClientsCaptureAll :: (HasClients sub subMk, IsSymbol c, ToPathPiece 
   getClients _ req xs =
     getClients (Proxy :: Proxy sub) (foldl (flip appendSegment) req (map toPathPiece xs))
 
+instance hasClientsResource :: (HasMethodClients ms cts clients)
+                              => HasClients (Resource ms cts) clients where
+  getClients _ req =
+    getMethodClients (Proxy :: Proxy ms) req
+
 toMethod :: forall m. IsSymbol m =>
             SProxy m
          -> Either Method.Method Method.CustomMethod
 toMethod p = Method.fromString (reflectSymbol p)
 
-instance hasClientsHandlerJson :: (DecodeJson b, IsSymbol method)
-                                  => HasClients (Handler method JSON b) (Aff (ajax :: AJAX | e) b) where
-  getClients _ req = do
+
+class HasMethodClients m cts client | m -> cts, m -> client where
+  getMethodClients :: Proxy m -> RequestBuilder -> client
+
+instance hasMethodClientsAlt :: ( HasMethodClients m1 cts1 client1
+                                , HasMethodClients m2 cts2 client2
+                                )
+                             => HasMethodClients (m1 :<|> m2) (cts1 :<|> cts2) (client1 :<|> client2) where
+  getMethodClients _ req =
+    getMethodClients (Proxy :: Proxy m1) req
+    :<|> getMethodClients (Proxy :: Proxy m2) req
+
+instance hasMethodClientsMethodJson :: (DecodeJson r, IsSymbol method)
+                                    => HasMethodClients (Method method r) JSON (Aff (ajax :: AJAX | e) r) where
+  getMethodClients _ req = do
     r <- toAffjaxRequest req
          # _ { method = toMethod (SProxy :: SProxy method) }
          # affjax
@@ -70,25 +94,22 @@ instance hasClientsHandlerJson :: (DecodeJson b, IsSymbol method)
       Right x -> pure x
 
 instance hasClientsHandlerHTMLString :: IsSymbol method
-                                        => HasClients (Handler method HTML a) (Aff (ajax :: AJAX | e) String) where
-  getClients _ req =
+                                        => HasMethodClients (Method method String) HTML (Aff (ajax :: AJAX | e) String) where
+  getMethodClients _ req =
     toAffjaxRequest req
     # _ { method = toMethod (SProxy :: SProxy method) }
     # affjax
     # map _.response
 
+{-
 instance hasClientsHandlerString :: IsSymbol method
-                                    => HasClients (Handler method String String) (Aff (ajax :: AJAX | e) String) where
-  getClients _ req =
+                                    => HasMethodClients (Method method String) String (Aff (ajax :: AJAX | e) String) where
+  getMethodClients _ req =
     toAffjaxRequest req
     # _ { method = toMethod (SProxy :: SProxy method) }
     # affjax
     # map _.response
-
-instance hasClientsAlt :: (HasClients c1 mk1, HasClients c2 mk2)
-                          => HasClients (c1 :<|> c2) (mk1 :<|> mk2) where
-  getClients _ req =
-    getClients (Proxy :: Proxy c1) req :<|> getClients (Proxy :: Proxy c2) req
+-}
 
 asClients :: forall r mk. HasClients r mk => Proxy r -> mk
 asClients p = getClients p emptyRequestBuilder

@@ -14,8 +14,8 @@
   ],
   "dependencies": {
     "purescript-prelude": "^2.3.0",
-    "purescript-hyper": "^0.4.1",
-    "purescript-hyper-routing": "^0.4.1",
+    "purescript-hyper": "^0.5.0",
+    "purescript-hyper-routing": "^0.6.0",
     "purescript-affjax": "^3.0.2"
   },
   "devDependencies": {

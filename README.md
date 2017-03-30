@@ -11,5 +11,8 @@ having to duplicate routing information and JSON encoding and decoding
 instances.
 
 ```bash
+cd example
+bower install
+npm install
 make run-example
 ```
