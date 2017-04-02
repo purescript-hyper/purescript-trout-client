@@ -3,17 +3,23 @@ module Client where
 
 import Prelude hiding (div)
 import Control.Monad.Eff (Eff)
+import Data.Maybe (Maybe(..))
+import Data.Foldable (for_)
 import Hyper.Routing ((:<|>))
 import Hyper.Routing.XHR (asClients)
 import Network.HTTP.Affjax (AJAX)
-import Pux (CoreEffects, EffModel, noEffects, renderToDOM, start)
-import Pux.Html (Html, button, div, h1, li, ol, text)
-import Pux.Html.Attributes (className, key)
-import Pux.Html.Events (onClick)
+import Pux (EffModel, noEffects, CoreEffects, start)
+import Pux.Renderer.React (renderToDOM)
+import Pux.DOM.HTML (HTML)
+import Pux.DOM.HTML.Attributes (key)
+import Pux.DOM.Events (onClick)
+import Text.Smolder.HTML (li, div, h1, button, ol)
+import Text.Smolder.HTML.Attributes (className)
+import Text.Smolder.Markup ((!), (#!), text)
 import Site (Task(..), site)
 
-data Action = RequestTasks
-            | ReceiveTasks (Array Task)
+data Event = RequestTasks
+           | ReceiveTasks (Array Task)
 
 type State =
   { tasks :: Array Task
@@ -23,41 +29,37 @@ type State =
 init :: State
 init = { tasks: [], status: "Nothing loaded from server yet" }
 
-update :: Action -> State -> EffModel State Action (ajax :: AJAX)
-update (ReceiveTasks tasks) state =
+foldp :: Event -> State -> EffModel State Event (ajax :: AJAX)
+foldp (ReceiveTasks tasks) state =
   noEffects $ state { tasks = tasks, status = "Tasks" }
-update (RequestTasks) state =
+foldp (RequestTasks) state =
   -- This is where the nice things are going on. Automatically, type-safe
   -- XHR clients. YEY!
   case asClients site of
     allTasks :<|> _ ->
       { state: state { status = "Fetching tasks..." }
-      , effects: [ ReceiveTasks <$> allTasks
+      , effects: [ (Just <<< ReceiveTasks) <$> allTasks
                  ]
       }
 
-view :: State -> Html Action
+view :: State -> HTML Event
 view state =
-  div
-    []
-    [ h1 [] [ text state.status ]
-    , div
-        []
-        [ button [ onClick (const RequestTasks) ] [ text "Fetch Tasks" ]
-        , ol [] $ map task state.tasks
-        ]
-    ]
+  div do
+    h1 $ text state.status
+    div do
+      button #! onClick (const RequestTasks) $ text "Fetch Tasks"
+      ol $ for_ state.tasks task
 
-task :: Task -> Html Action
+task :: Task -> HTML Event
 task (Task id title) =
-  li [ key (show id), className "task" ] [ text title ]
+  li ! key (show id) ! className "task" $ text title
 
 main :: Eff (CoreEffects (ajax :: AJAX)) Unit
 main = do
   app <- start
     { initialState: init
-    , update: update
-    , view: view
+    , foldp
+    , view
     , inputs: [] }
 
-  renderToDOM "#app" app.html
+  renderToDOM "#app" app.markup app.input
