@@ -16,13 +16,13 @@ import Data.MediaType.Common (textHTML)
 import Hyper.Node.FileServer (fileServer)
 import Hyper.Node.Server (defaultOptionsWithLogging, runServer')
 import Hyper.Response (closeHeaders, contentType, respond, writeStatus)
-import Hyper.Routing ((:<|>))
-import Hyper.Routing.Router (RoutingError(..), router)
+import Hyper.Trout.Router (RoutingError(..), router)
 import Hyper.Status (statusNotFound)
 import Node.Buffer (BUFFER)
 import Node.FS (FS)
 import Node.HTTP (HTTP)
 import Site (Task(..), TaskId, site)
+import Type.Trout ((:<|>))
 
 type AppM e a = ExceptT RoutingError (ReaderT (Array Task) (Aff e)) a
 
@@ -53,7 +53,7 @@ main =
         :*> respond "<h1>Not Found</h1>"
 
     onRoutingError status msg
-      | status == statusNotFound = fileServer "public" notFound
+      | status == statusNotFound = fileServer "example/public" notFound
 
       | otherwise =
         writeStatus status

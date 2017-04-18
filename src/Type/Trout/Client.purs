@@ -1,4 +1,4 @@
-module Hyper.Routing.XHR
+module Type.Trout.Client
        ( class HasClients
        , getClients
        , class HasMethodClients
@@ -17,12 +17,12 @@ import Data.Either (Either(..))
 import Data.Foldable (foldl)
 import Data.String (joinWith)
 import Data.Symbol (class IsSymbol, SProxy(..), reflectSymbol)
-import Hyper.Routing (type (:>), type (:<|>), (:<|>), Capture, CaptureAll, Resource, Method, Lit)
-import Hyper.Routing.ContentType.HTML (HTML)
-import Hyper.Routing.ContentType.JSON (JSON)
-import Hyper.Routing.PathPiece (class ToPathPiece, toPathPiece)
 import Network.HTTP.Affjax (AJAX, AffjaxRequest, affjax, defaultRequest)
 import Type.Proxy (Proxy(..))
+import Type.Trout (type (:>), type (:<|>), (:<|>), Capture, CaptureAll, Resource, Method, Lit)
+import Type.Trout.ContentType.HTML (HTML)
+import Type.Trout.ContentType.JSON (JSON)
+import Type.Trout.PathPiece (class ToPathPiece, toPathPiece)
 
 type RequestBuilder = { path :: Array String }
 
@@ -66,8 +66,9 @@ instance hasClientsResource :: (HasMethodClients ms cts clients)
   getClients _ req =
     getMethodClients (Proxy :: Proxy ms) req
 
-toMethod :: forall m. IsSymbol m =>
-            SProxy m
+toMethod :: forall m
+          . IsSymbol m
+          => SProxy m
          -> Either Method.Method Method.CustomMethod
 toMethod p = Method.fromString (reflectSymbol p)
 
@@ -100,16 +101,6 @@ instance hasClientsHandlerHTMLString :: IsSymbol method
     # _ { method = toMethod (SProxy :: SProxy method) }
     # affjax
     # map _.response
-
-{-
-instance hasClientsHandlerString :: IsSymbol method
-                                    => HasMethodClients (Method method String) String (Aff (ajax :: AJAX | e) String) where
-  getMethodClients _ req =
-    toAffjaxRequest req
-    # _ { method = toMethod (SProxy :: SProxy method) }
-    # affjax
-    # map _.response
--}
 
 asClients :: forall r mk. HasClients r mk => Proxy r -> mk
 asClients p = getClients p emptyRequestBuilder

@@ -1,9 +1,9 @@
 {
-  "name": "purescript-hyper-routing-xhr",
-  "description": "Automatically derived XHR clients for Hyper routing types.",
+  "name": "purescript-trout-client",
+  "description": "Automatically derived XHR clients for Trout routing types.",
   "repository": {
     "type": "git",
-    "url": "git://github.com/owickstrom/purescript-hyper-routing-xhr.git"
+    "url": "git://github.com/owickstrom/purescript-trout-client.git"
   },
   "license": "MPL-2.0",
   "ignore": [
@@ -13,13 +13,15 @@
     "output"
   ],
   "dependencies": {
-    "purescript-prelude": "^2.3.0",
-    "purescript-hyper": "^0.5.0",
-    "purescript-hyper-routing": "^0.6.0",
-    "purescript-affjax": "^3.0.2"
+    "purescript-prelude": "^3.0.0",
+    "purescript-trout": "^0.8.0",
+    "purescript-affjax": "^4.0.0"
   },
   "devDependencies": {
-    "purescript-psci-support": "^2.0.0",
-    "purescript-pux": "^7.0.0"
+    "purescript-psci-support": "^3.0.0",
+    "purescript-jquery": "^4.0.0",
+    "purescript-hyper": "^0.7.2",
+    "purescript-hypertrout": "^0.8.1",
+    "purescript-argonaut-generic": "*"
   }
 }

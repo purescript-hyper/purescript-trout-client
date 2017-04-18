@@ -1,65 +1,30 @@
--- Based on https://github.com/alexmingoia/purescript-pux/blob/master/examples/ajax/Todos.purs
 module Client where
 
 import Prelude hiding (div)
 import Control.Monad.Eff (Eff)
 import Data.Maybe (Maybe(..))
-import Data.Foldable (for_)
-import Hyper.Routing ((:<|>))
-import Hyper.Routing.XHR (asClients)
+import Data.Foldable (foldMap)
+import DOM (DOM)
+import Control.Monad.Aff (launchAff)
+import Control.Monad.Eff.Class (liftEff)
+import Control.Monad.Eff.Exception (EXCEPTION)
+import Control.Monad.Eff.JQuery (body, setHtml)
 import Network.HTTP.Affjax (AJAX)
-import Pux (EffModel, noEffects, CoreEffects, start)
-import Pux.Renderer.React (renderToDOM)
-import Pux.DOM.HTML (HTML)
-import Pux.DOM.HTML.Attributes (key)
-import Pux.DOM.Events (onClick)
+import Site (Task(..), site)
 import Text.Smolder.HTML (li, div, h1, button, ol)
 import Text.Smolder.HTML.Attributes (className)
 import Text.Smolder.Markup ((!), (#!), text)
-import Site (Task(..), site)
+import Text.Smolder.Renderer.String (render)
+import Type.Trout ((:<|>))
+import Type.Trout.Client (asClients)
+import Type.Trout.ContentType.HTML (encodeHTML)
 
-data Event = RequestTasks
-           | ReceiveTasks (Array Task)
-
-type State =
-  { tasks :: Array Task
-  , status :: String
-  }
-
-init :: State
-init = { tasks: [], status: "Nothing loaded from server yet" }
-
-foldp :: Event -> State -> EffModel State Event (ajax :: AJAX)
-foldp (ReceiveTasks tasks) state =
-  noEffects $ state { tasks = tasks, status = "Tasks" }
-foldp (RequestTasks) state =
-  -- This is where the nice things are going on. Automatically, type-safe
-  -- XHR clients. YEY!
-  case asClients site of
-    allTasks :<|> _ ->
-      { state: state { status = "Fetching tasks..." }
-      , effects: [ (Just <<< ReceiveTasks) <$> allTasks
-                 ]
-      }
-
-view :: State -> HTML Event
-view state =
-  div do
-    h1 $ text state.status
-    div do
-      button #! onClick (const RequestTasks) $ text "Fetch Tasks"
-      ol $ for_ state.tasks task
-
-task :: Task -> HTML Event
-task (Task id title) =
-  li ! key (show id) ! className "task" $ text title
-
-main :: Eff (CoreEffects (ajax :: AJAX)) Unit
+main :: Eff (exception :: EXCEPTION, ajax :: AJAX, dom :: DOM) Unit
 main = do
-  app <- start
-    { initialState: init
-    , foldp
-    , view
-    , inputs: [] }
+  b <- body
+  void $ launchAff $
+    case asClients site of
+      allTasks :<|> _ -> do
+        tasks <- allTasks
+        liftEff (setHtml (foldMap (render <<< encodeHTML) tasks) b)
 
-  renderToDOM "#app" app.markup app.input

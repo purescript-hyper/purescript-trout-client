@@ -1,6 +1,12 @@
-# purescript-hyper-routing-xhr
+# Trout Client
 
-_Automatically derived XHR clients for Hyper routing types._
+_Automatically derived XHR clients for Trout routing types._
+
+## Usage
+
+```bash
+bower install --save purescript-trout-client
+```
 
 ## Example
 
@@ -11,8 +17,15 @@ having to duplicate routing information and JSON encoding and decoding
 instances.
 
 ```bash
-cd example
 bower install
-npm install
+(cd example && npm install)
 make run-example
 ```
+
+## API Documentation
+
+This library's API documentation is published [on Pursuit](https://pursuit.purescript.org/packages/purescript-trout-client).
+
+## License
+
+[Mozilla Public License Version 2.0](LICENSE)
