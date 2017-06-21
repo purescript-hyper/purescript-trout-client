@@ -26,6 +26,14 @@ make run-example
 
 This library's API documentation is published [on Pursuit](https://pursuit.purescript.org/packages/purescript-trout-client).
 
+## Changelog
+
+* **0.8.0**
+  - Upgraded to Trout 0.10.0, and all clients are now derived as records, based
+    on the named routing types. Specific methods of a resource are accesible
+    under the corresponding uppercase field in the resource client record, e.g.
+    `site.admin.logs."GET"`.
+
 ## License
 
 [Mozilla Public License Version 2.0](LICENSE)
