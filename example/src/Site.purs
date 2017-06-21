@@ -9,9 +9,9 @@ import Data.Generic (class Generic, gShow)
 import Text.Smolder.HTML (h2, p)
 import Text.Smolder.Markup (text)
 import Type.Proxy (Proxy(..))
-import Type.Trout (type (:/), type (:<|>), type (:>), Capture, Resource)
+import Type.Trout (type (:/), type (:<|>), type (:=), type (:>), Capture, Resource)
+import Type.Trout.ContentType.HTML (class EncodeHTML)
 import Type.Trout.ContentType.JSON (JSON)
-import Type.Trout.ContentType.HTML (class EncodeHTML, encodeHTML)
 import Type.Trout.Method (Get)
 
 type TaskId = Int
@@ -29,12 +29,13 @@ instance encodeHTMLTask :: EncodeHTML Task where
     h2 (text ("Task " <> show id'))
     p (text description)
 
-type TasksResource = Resource (Get (Array Task)) JSON
+type TasksResource = Resource (Get (Array Task) JSON)
 
-type TaskResource = Resource (Get Task) JSON
+type TaskResource = Resource (Get Task JSON)
 
 type Site =
-  "tasks" :/ (TasksResource :<|> Capture "id" TaskId :> TaskResource)
+  "tasks" :/ (     "tasks" := TasksResource
+              :<|> "task"  := Capture "id" TaskId :> TaskResource)
 
 site :: Proxy Site
 site = Proxy

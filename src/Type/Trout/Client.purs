@@ -19,7 +19,8 @@ import Data.String (joinWith)
 import Data.Symbol (class IsSymbol, SProxy(..), reflectSymbol)
 import Network.HTTP.Affjax (AJAX, AffjaxRequest, affjax, defaultRequest)
 import Type.Proxy (Proxy(..))
-import Type.Trout (type (:>), type (:<|>), (:<|>), Capture, CaptureAll, Resource, Method, Lit)
+import Type.Trout (type (:<|>), type (:=), type (:>), Capture, CaptureAll, Lit, Method, Resource)
+import Type.Trout.Record as Record
 import Type.Trout.ContentType.HTML (HTML)
 import Type.Trout.ContentType.JSON (JSON)
 import Type.Trout.PathPiece (class ToPathPiece, toPathPiece)
@@ -39,10 +40,27 @@ toAffjaxRequest req = defaultRequest { url = "/" <> joinWith "/" req.path }
 class HasClients r mk | r -> mk where
   getClients :: Proxy r -> RequestBuilder -> mk
 
-instance hasClientsAlt :: (HasClients c1 mk1, HasClients c2 mk2)
-                          => HasClients (c1 :<|> c2) (mk1 :<|> mk2) where
-  getClients _ req =
-    getClients (Proxy :: Proxy c1) req :<|> getClients (Proxy :: Proxy c2) req
+instance hasClientsAlt :: ( HasClients c1 mk1
+                          , HasClients c2 (Record mk2)
+                          , IsSymbol name
+                          , RowCons name mk1 mk2 out
+                          )
+                          => HasClients (name := c1 :<|> c2) (Record out) where
+  getClients _ req = Record.insert name first rest
+    where
+      name = SProxy :: SProxy name
+      first = getClients (Proxy :: Proxy c1) req
+      rest = getClients (Proxy :: Proxy c2) req
+
+instance hasClientsNamed :: ( HasClients c mk
+                          , IsSymbol name
+                          , RowCons name mk () out
+                          )
+                          => HasClients (name := c) (Record out) where
+  getClients _ req = Record.insert name clients {}
+    where
+      name = SProxy :: SProxy name
+      clients = getClients (Proxy :: Proxy c) req
 
 instance hasClientsLit :: (HasClients sub subMk, IsSymbol lit)
                           => HasClients (Lit lit :> sub) subMk where
@@ -61,10 +79,38 @@ instance hasClientsCaptureAll :: (HasClients sub subMk, IsSymbol c, ToPathPiece 
   getClients _ req xs =
     getClients (Proxy :: Proxy sub) (foldl (flip appendSegment) req (map toPathPiece xs))
 
-instance hasClientsResource :: (HasMethodClients ms cts clients)
-                              => HasClients (Resource ms cts) clients where
+instance hasClientsResource :: (HasClients methods clients)
+                              => HasClients (Resource methods) clients where
   getClients _ req =
-    getMethodClients (Proxy :: Proxy ms) req
+    getClients (Proxy :: Proxy methods) req
+
+instance hasClientsMethodAlt :: ( IsSymbol method
+                                , HasMethodClients method repr cts mk1
+                                , HasClients methods (Record mk2)
+                                , RowCons method mk1 mk2 out
+                                )
+                                => HasClients
+                                   (Method method repr cts :<|> methods)
+                                   (Record out) where
+  getClients _ req =
+    Record.insert method first rest
+    where
+      method = SProxy :: SProxy method
+      cts = Proxy :: Proxy cts
+      first = getMethodClients method cts req
+      rest = getClients (Proxy :: Proxy methods) req
+
+instance hasClientsMethod :: ( IsSymbol method
+                             , HasMethodClients method repr cts mk1
+                             , RowCons method mk1 () out
+                             )
+                             => HasClients (Method method repr cts) (Record out) where
+  getClients _ req =
+    Record.insert method clients {}
+    where
+      method = SProxy :: SProxy method
+      cts = Proxy :: Proxy cts
+      clients = getMethodClients method cts req
 
 toMethod :: forall m
           . IsSymbol m
@@ -73,34 +119,28 @@ toMethod :: forall m
 toMethod p = Method.fromString (reflectSymbol p)
 
 
-class HasMethodClients m cts client | m -> cts, m -> client where
-  getMethodClients :: Proxy m -> RequestBuilder -> client
+class HasMethodClients method repr cts client | cts -> repr, cts -> client where
+  getMethodClients :: SProxy method -> Proxy cts -> RequestBuilder -> client
 
-instance hasMethodClientsAlt :: ( HasMethodClients m1 cts1 client1
-                                , HasMethodClients m2 cts2 client2
-                                )
-                             => HasMethodClients (m1 :<|> m2) (cts1 :<|> cts2) (client1 :<|> client2) where
-  getMethodClients _ req =
-    getMethodClients (Proxy :: Proxy m1) req
-    :<|> getMethodClients (Proxy :: Proxy m2) req
-
-instance hasMethodClientsMethodJson :: (DecodeJson r, IsSymbol method)
-                                    => HasMethodClients (Method method r) JSON (Aff (ajax :: AJAX | e) r) where
-  getMethodClients _ req = do
+instance hasMethodClientMethodJson
+  :: (DecodeJson r, IsSymbol method)
+  => HasMethodClients method r JSON (Aff (ajax :: AJAX | e) r) where
+  getMethodClients method _ req = do
     r <- toAffjaxRequest req
-         # _ { method = toMethod (SProxy :: SProxy method) }
+         # _ { method = toMethod method }
          # affjax
     case decodeJson r.response of
       Left err -> throwError (error err)
       Right x -> pure x
 
-instance hasClientsHandlerHTMLString :: IsSymbol method
-                                        => HasMethodClients (Method method String) HTML (Aff (ajax :: AJAX | e) String) where
-  getMethodClients _ req =
+instance hasMethodClientsHTMLString
+  :: IsSymbol method
+  => HasMethodClients method String HTML (Aff (ajax :: AJAX | e) String) where
+  getMethodClients method _ req =
     toAffjaxRequest req
-    # _ { method = toMethod (SProxy :: SProxy method) }
+    # _ { method = toMethod method }
     # affjax
     # map _.response
 
 asClients :: forall r mk. HasClients r mk => Proxy r -> mk
-asClients p = getClients p emptyRequestBuilder
+asClients = flip getClients emptyRequestBuilder

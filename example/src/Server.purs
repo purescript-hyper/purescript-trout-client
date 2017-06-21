@@ -22,29 +22,32 @@ import Node.Buffer (BUFFER)
 import Node.FS (FS)
 import Node.HTTP (HTTP)
 import Site (Task(..), TaskId, site)
-import Type.Trout ((:<|>))
 
 type AppM e a = ExceptT RoutingError (ReaderT (Array Task) (Aff e)) a
 
-allTasks :: forall e. AppM e (Array Task)
-allTasks = ask
+tasksResource :: forall e. {"GET" :: AppM e (Array Task)}
+tasksResource = {"GET": ask}
 
-getTask :: forall e. TaskId -> AppM e Task
-getTask taskId =
-  find (\(Task i _) -> i == taskId) <$> ask >>=
-  case _ of
-    Just task -> pure task
-    Nothing -> throwError (HTTPError { status: statusNotFound
-                                     , message: Just "Task not found."
-                                     })
+taskResource :: forall e. TaskId -> {"GET" :: AppM e Task}
+taskResource taskId =
+  {"GET":
+   find (\(Task i _) -> i == taskId) <$> ask >>=
+   case _ of
+     Just task -> pure task
+     Nothing -> throwError (HTTPError { status: statusNotFound
+                                      , message: Just "Task not found."
+                                      })
+  }
 
 main :: forall e. Eff (http :: HTTP, console :: CONSOLE, avar :: AVAR, buffer :: BUFFER, fs :: FS | e) Unit
 main =
   runServer' defaultOptionsWithLogging {} (flip runReaderT tasks) siteRouter
   where
     tasks = (map (\i -> Task i ("Task #" <> show i)) (1..10))
-
-    siteRouter = router site (allTasks :<|> getTask) onRoutingError
+    resources = { task: taskResource
+                , tasks: tasksResource
+                }
+    siteRouter = router site resources onRoutingError
 
     notFound =
       writeStatus statusNotFound
