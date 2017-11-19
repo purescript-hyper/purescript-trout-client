@@ -7,7 +7,7 @@ module Type.Trout.Client
        ) where
 
 import Prelude
-import Data.HTTP.Method as Method
+
 import Control.Monad.Aff (Aff)
 import Control.Monad.Eff.Exception (error)
 import Control.Monad.Except.Trans (throwError)
@@ -15,15 +15,17 @@ import Data.Argonaut (class DecodeJson, decodeJson)
 import Data.Array (singleton)
 import Data.Either (Either(..))
 import Data.Foldable (foldl)
+import Data.HTTP.Method as Method
+import Data.Maybe (Maybe)
 import Data.String (joinWith)
 import Data.Symbol (class IsSymbol, SProxy(..), reflectSymbol)
 import Network.HTTP.Affjax (AJAX, AffjaxRequest, affjax, defaultRequest)
 import Type.Proxy (Proxy(..))
-import Type.Trout (type (:<|>), type (:=), type (:>), Capture, CaptureAll, Lit, Method, Resource)
-import Type.Trout.Record as Record
+import Type.Trout (type (:<|>), type (:=), type (:>), Capture, CaptureAll, Lit, Method, QueryParam, QueryParams, Resource)
 import Type.Trout.ContentType.HTML (HTML)
 import Type.Trout.ContentType.JSON (JSON)
 import Type.Trout.PathPiece (class ToPathPiece, toPathPiece)
+import Type.Trout.Record as Record
 
 type RequestBuilder = { path :: Array String }
 
@@ -78,6 +80,16 @@ instance hasClientsCaptureAll :: (HasClients sub subMk, IsSymbol c, ToPathPiece 
                                  => HasClients (CaptureAll c t :> sub) (Array t -> subMk) where
   getClients _ req xs =
     getClients (Proxy :: Proxy sub) (foldl (flip appendSegment) req (map toPathPiece xs))
+
+instance hasClientsQueryParam :: (HasClients sub subMk, IsSymbol c, ToPathPiece t)
+                                 => HasClients (QueryParam c t :> sub) (Maybe t -> subMk) where
+  getClients _ req x =
+    getClients (Proxy :: Proxy sub) (foldl (flip appendSegment) req (map toPathPiece x))
+
+instance hasClientsQueryParams :: (HasClients sub subMk, IsSymbol c, ToPathPiece t)
+                                  => HasClients (QueryParams c t :> sub) (Array t -> subMk) where
+  getClients _ req x =
+    getClients (Proxy :: Proxy sub) (foldl (flip appendSegment) req (map toPathPiece x))
 
 instance hasClientsResource :: (HasClients methods clients)
                               => HasClients (Resource methods) clients where
