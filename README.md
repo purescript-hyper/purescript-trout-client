@@ -28,6 +28,8 @@ This library's API documentation is published [on Pursuit](https://pursuit.pures
 
 ## Changelog
 
+* **0.10.0**
+  - Added instances for `QueryParam` and `QueryParams`
 * **0.8.0**
   - Upgraded to Trout 0.10.0, and all clients are now derived as records, based
     on the named routing types. Specific methods of a resource are accesible
