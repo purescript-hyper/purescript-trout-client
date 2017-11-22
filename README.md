@@ -22,6 +22,29 @@ bower install
 make run-example
 ```
 
+## Remote Servers
+
+Sometimes you want a client for a remote server.
+E.g. you rely on GitHub or use different servers in different environments.
+In these cases, you can use `BaseURI` as part of the API:
+
+```PureScript
+type API
+  = BaseURI
+  :> "users"
+  :/ Capture "user_id" UserId
+  :> Response (Get User JSON)
+
+api :: Proxy API
+api = Proxy
+
+user :: forall e. BaseURI -> UserId -> { "GET" :: Aff (ajax :: AJAX | e) User }
+user = asClients api
+```
+
+When you are ready to use the client,
+you pass in the URI of the server as the first argument.
+
 ## API Documentation
 
 This library's API documentation is published [on Pursuit](https://pursuit.purescript.org/packages/purescript-trout-client).

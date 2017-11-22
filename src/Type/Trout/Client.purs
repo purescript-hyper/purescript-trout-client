@@ -4,6 +4,7 @@ module Type.Trout.Client
        , class HasMethodClients
        , getMethodClients
        , asClients
+       , BaseURI(..)
        ) where
 
 import Prelude
@@ -15,10 +16,15 @@ import Data.Argonaut (class DecodeJson, decodeJson)
 import Data.Array (singleton)
 import Data.Either (Either(..))
 import Data.Foldable (foldl)
+import Data.Generic.Rep (class Generic)
+import Data.Generic.Rep.Show (genericShow)
 import Data.HTTP.Method as Method
 import Data.Maybe (Maybe)
+import Data.Newtype (class Newtype)
 import Data.String (joinWith)
 import Data.Symbol (class IsSymbol, SProxy(..), reflectSymbol)
+import Data.URI.Authority (Authority, printAuthority)
+import Data.URI.Scheme (URIScheme, printScheme)
 import Network.HTTP.Affjax (AJAX, AffjaxRequest, affjax, defaultRequest)
 import Type.Proxy (Proxy(..))
 import Type.Trout (type (:<|>), type (:=), type (:>), Capture, CaptureAll, Lit, Method, QueryParam, QueryParams, Resource)
@@ -27,17 +33,38 @@ import Type.Trout.ContentType.JSON (JSON)
 import Type.Trout.PathPiece (class ToPathPiece, toPathPiece)
 import Type.Trout.Record as Record
 
+newtype BaseURI = BaseURI { scheme :: URIScheme , authority :: Authority }
+
+derive instance eqBaseURI :: Eq BaseURI
+derive instance genericBaseURI :: Generic BaseURI _
+derive instance newtypeBaseURI :: Newtype BaseURI _
+derive instance ordBaseURI :: Ord BaseURI
+instance showScheme :: Show BaseURI where
+  show = genericShow
+
+instance hasClientsBaseURI :: ( HasClients sub subMk
+                              )
+                              => HasClients (BaseURI :> sub) (BaseURI -> subMk) where
+  getClients _ req (BaseURI {authority, scheme}) =
+    getClients (Proxy :: Proxy sub) (prependSegment schemeAuthority req)
+      where
+        schemeAuthority = printScheme scheme <> printAuthority authority
+
 type RequestBuilder = { path :: Array String }
 
 emptyRequestBuilder :: RequestBuilder
 emptyRequestBuilder = { path: [] }
+
+prependSegment :: String -> RequestBuilder -> RequestBuilder
+prependSegment segment req =
+  req { path = singleton segment <> req.path }
 
 appendSegment :: String -> RequestBuilder -> RequestBuilder
 appendSegment segment req =
   req { path = req.path <> singleton segment }
 
 toAffjaxRequest :: RequestBuilder -> AffjaxRequest Unit
-toAffjaxRequest req = defaultRequest { url = "/" <> joinWith "/" req.path }
+toAffjaxRequest req = defaultRequest { url = joinWith "/" req.path }
 
 class HasClients r mk | r -> mk where
   getClients :: Proxy r -> RequestBuilder -> mk
