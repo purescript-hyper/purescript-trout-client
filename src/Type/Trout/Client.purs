@@ -15,11 +15,11 @@ import Control.Monad.Except.Trans (throwError)
 import Data.Argonaut (class DecodeJson, decodeJson)
 import Data.Array (singleton)
 import Data.Either (Either(..))
-import Data.Foldable (foldl)
+import Data.Foldable (foldMap, foldl)
 import Data.Generic.Rep (class Generic)
 import Data.Generic.Rep.Show (genericShow)
 import Data.HTTP.Method as Method
-import Data.Maybe (Maybe)
+import Data.Maybe (Maybe(Nothing, Just))
 import Data.Newtype (class Newtype)
 import Data.String (joinWith)
 import Data.Symbol (class IsSymbol, SProxy(..), reflectSymbol)
@@ -45,26 +45,24 @@ instance showScheme :: Show BaseURI where
 instance hasClientsBaseURI :: ( HasClients sub subMk
                               )
                               => HasClients (BaseURI :> sub) (BaseURI -> subMk) where
-  getClients _ req (BaseURI {authority, scheme}) =
-    getClients (Proxy :: Proxy sub) (prependSegment schemeAuthority req)
-      where
-        schemeAuthority = printScheme scheme <> printAuthority authority
+  getClients _ req baseURI =
+    getClients (Proxy :: Proxy sub) req { baseURI = Just baseURI }
 
-type RequestBuilder = { path :: Array String }
+type RequestBuilder = { baseURI :: Maybe BaseURI, path :: Array String }
 
 emptyRequestBuilder :: RequestBuilder
-emptyRequestBuilder = { path: [] }
-
-prependSegment :: String -> RequestBuilder -> RequestBuilder
-prependSegment segment req =
-  req { path = singleton segment <> req.path }
+emptyRequestBuilder = { baseURI: Nothing, path: [] }
 
 appendSegment :: String -> RequestBuilder -> RequestBuilder
 appendSegment segment req =
   req { path = req.path <> singleton segment }
 
 toAffjaxRequest :: RequestBuilder -> AffjaxRequest Unit
-toAffjaxRequest req = defaultRequest { url = joinWith "/" req.path }
+toAffjaxRequest req =
+  defaultRequest { url = foldMap baseURI req.baseURI <> "/" <> joinWith "/" req.path }
+    where
+      baseURI (BaseURI {authority, scheme}) =
+        printScheme scheme <> printAuthority authority
 
 class HasClients r mk | r -> mk where
   getClients :: Proxy r -> RequestBuilder -> mk
