@@ -19,6 +19,7 @@ import Data.HTTP.Method as Method
 import Data.Maybe (Maybe)
 import Data.String (joinWith)
 import Data.Symbol (class IsSymbol, SProxy(..), reflectSymbol)
+import Data.Tuple (Tuple(..))
 import Network.HTTP.Affjax (AJAX, AffjaxRequest, affjax, defaultRequest)
 import Type.Proxy (Proxy(..))
 import Type.Trout (type (:<|>), type (:=), type (:>), Capture, CaptureAll, Lit, Method, QueryParam, QueryParams, Resource)
@@ -27,17 +28,25 @@ import Type.Trout.ContentType.JSON (JSON)
 import Type.Trout.PathPiece (class ToPathPiece, toPathPiece)
 import Type.Trout.Record as Record
 
-type RequestBuilder = { path :: Array String }
+type RequestBuilder = { path :: Array String, params :: Array (Tuple String String) }
 
 emptyRequestBuilder :: RequestBuilder
-emptyRequestBuilder = { path: [] }
+emptyRequestBuilder = { path: [], params: [] }
 
 appendSegment :: String -> RequestBuilder -> RequestBuilder
 appendSegment segment req =
   req { path = req.path <> singleton segment }
 
+appendQueryParam :: String -> String -> RequestBuilder -> RequestBuilder
+appendQueryParam param value req =
+  req { params = req.params <> singleton (Tuple param value) }
+
 toAffjaxRequest :: RequestBuilder -> AffjaxRequest Unit
-toAffjaxRequest req = defaultRequest { url = "/" <> joinWith "/" req.path }
+toAffjaxRequest req = defaultRequest { url = "/" <> joinWith "/" req.path <> params }
+  where
+  params = case req.params of
+    [] -> ""
+    segments -> "?" <> joinWith "&" (map (\(Tuple q x) -> q <> "=" <> x) segments)
 
 class HasClients r mk | r -> mk where
   getClients :: Proxy r -> RequestBuilder -> mk
@@ -84,12 +93,16 @@ instance hasClientsCaptureAll :: (HasClients sub subMk, IsSymbol c, ToPathPiece 
 instance hasClientsQueryParam :: (HasClients sub subMk, IsSymbol c, ToPathPiece t)
                                  => HasClients (QueryParam c t :> sub) (Maybe t -> subMk) where
   getClients _ req x =
-    getClients (Proxy :: Proxy sub) (foldl (flip appendSegment) req (map toPathPiece x))
+    getClients (Proxy :: Proxy sub) (foldl (flip $ appendQueryParam q) req (map toPathPiece x))
+    where
+    q = reflectSymbol (SProxy :: SProxy c)
 
 instance hasClientsQueryParams :: (HasClients sub subMk, IsSymbol c, ToPathPiece t)
                                   => HasClients (QueryParams c t :> sub) (Array t -> subMk) where
   getClients _ req x =
-    getClients (Proxy :: Proxy sub) (foldl (flip appendSegment) req (map toPathPiece x))
+    getClients (Proxy :: Proxy sub) (foldl (flip $ appendQueryParam q) req (map toPathPiece x))
+    where
+    q = reflectSymbol (SProxy :: SProxy c)
 
 instance hasClientsResource :: (HasClients methods clients)
                               => HasClients (Resource methods) clients where
