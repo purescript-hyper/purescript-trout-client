@@ -2,10 +2,11 @@ module Site where
 
 import Prelude
 import Data.Argonaut.Decode (class DecodeJson)
-import Data.Argonaut.Decode.Generic (gDecodeJson)
+import Data.Argonaut.Decode.Generic.Rep (genericDecodeJson)
 import Data.Argonaut.Encode (class EncodeJson)
-import Data.Argonaut.Encode.Generic (gEncodeJson)
-import Data.Generic (class Generic, gShow)
+import Data.Argonaut.Encode.Generic.Rep (genericEncodeJson)
+import Data.Generic.Rep (class Generic)
+import Data.Generic.Rep.Show (genericShow)
 import Text.Smolder.HTML (h2, p)
 import Text.Smolder.Markup (text)
 import Type.Proxy (Proxy(..))
@@ -18,11 +19,11 @@ type TaskId = Int
 
 data Task = Task TaskId String
 
-derive instance genericTask :: Generic Task
+derive instance genericTask :: Generic Task _
 
-instance showTask :: Show Task where show = gShow
-instance encodeJsonTask :: EncodeJson Task where encodeJson = gEncodeJson
-instance decodeJsonTask :: DecodeJson Task where decodeJson = gDecodeJson
+instance showTask :: Show Task where show = genericShow
+instance encodeJsonTask :: EncodeJson Task where encodeJson = genericEncodeJson
+instance decodeJsonTask :: DecodeJson Task where decodeJson = genericDecodeJson
 
 instance encodeHTMLTask :: EncodeHTML Task where
   encodeHTML (Task id' description) = do

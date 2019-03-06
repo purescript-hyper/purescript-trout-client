@@ -1,34 +1,29 @@
 module Server where
 
 import Prelude
-import Control.IxMonad ((:*>))
-import Control.Monad.Aff (Aff)
-import Control.Monad.Aff.AVar (AVAR)
-import Control.Monad.Eff (Eff)
-import Control.Monad.Eff.Console (CONSOLE)
 import Control.Monad.Error.Class (throwError)
 import Control.Monad.Except (ExceptT)
+import Control.Monad.Indexed ((:*>))
 import Control.Monad.Reader (ReaderT, ask)
 import Control.Monad.Reader.Trans (runReaderT)
 import Data.Array (find, (..))
 import Data.Maybe (Maybe(..), maybe)
 import Data.MediaType.Common (textHTML)
+import Effect (Effect)
+import Effect.Aff (Aff)
 import Hyper.Node.FileServer (fileServer)
 import Hyper.Node.Server (defaultOptionsWithLogging, runServer')
 import Hyper.Response (closeHeaders, contentType, respond, writeStatus)
 import Hyper.Trout.Router (RoutingError(..), router)
 import Hyper.Status (statusNotFound)
-import Node.Buffer (BUFFER)
-import Node.FS (FS)
-import Node.HTTP (HTTP)
 import Site (Task(..), TaskId, site)
 
-type AppM e a = ExceptT RoutingError (ReaderT (Array Task) (Aff e)) a
+type AppM a = ExceptT RoutingError (ReaderT (Array Task) Aff) a
 
-tasksResource :: forall e. {"GET" :: AppM e (Array Task)}
+tasksResource :: {"GET" :: AppM (Array Task)}
 tasksResource = {"GET": ask}
 
-taskResource :: forall e. TaskId -> {"GET" :: AppM e Task}
+taskResource :: TaskId -> {"GET" :: AppM Task}
 taskResource taskId =
   {"GET":
    find (\(Task i _) -> i == taskId) <$> ask >>=
@@ -39,7 +34,7 @@ taskResource taskId =
                                       })
   }
 
-main :: forall e. Eff (http :: HTTP, console :: CONSOLE, avar :: AVAR, buffer :: BUFFER, fs :: FS | e) Unit
+main :: Effect Unit
 main =
   runServer' defaultOptionsWithLogging {} (flip runReaderT tasks) siteRouter
   where
@@ -62,4 +57,4 @@ main =
         writeStatus status
         :*> contentType textHTML
         :*> closeHeaders
-        :*> respond (maybe "" id msg)
+        :*> respond (maybe "" identity msg)

@@ -8,8 +8,9 @@ module Type.Trout.Client
 
 import Prelude
 
-import Control.Monad.Aff (Aff)
-import Control.Monad.Eff.Exception (error)
+import Affjax (Request, defaultRequest, request)
+import Affjax.ResponseFormat (json, string) as AXResponseFormat
+import Affjax.ResponseFormat (printResponseFormatError)
 import Control.Monad.Except.Trans (throwError)
 import Data.Argonaut (class DecodeJson, decodeJson)
 import Data.Array (singleton)
@@ -20,7 +21,9 @@ import Data.Maybe (Maybe)
 import Data.String (joinWith)
 import Data.Symbol (class IsSymbol, SProxy(..), reflectSymbol)
 import Data.Tuple (Tuple(..))
-import Network.HTTP.Affjax (AJAX, AffjaxRequest, affjax, defaultRequest)
+import Effect.Aff (Aff)
+import Effect.Exception (error)
+import Prim.Row (class Cons)
 import Type.Proxy (Proxy(..))
 import Type.Trout (type (:<|>), type (:=), type (:>), Capture, CaptureAll, Lit, Method, QueryParam, QueryParams, Resource)
 import Type.Trout.ContentType.HTML (HTML)
@@ -41,7 +44,7 @@ appendQueryParam :: String -> String -> RequestBuilder -> RequestBuilder
 appendQueryParam param value req =
   req { params = req.params <> singleton (Tuple param value) }
 
-toAffjaxRequest :: RequestBuilder -> AffjaxRequest Unit
+toAffjaxRequest :: RequestBuilder -> Request Unit
 toAffjaxRequest req = defaultRequest { url = "/" <> joinWith "/" req.path <> params }
   where
   params = case req.params of
@@ -54,7 +57,7 @@ class HasClients r mk | r -> mk where
 instance hasClientsAlt :: ( HasClients c1 mk1
                           , HasClients c2 (Record mk2)
                           , IsSymbol name
-                          , RowCons name mk1 mk2 out
+                          , Cons name mk1 mk2 out
                           )
                           => HasClients (name := c1 :<|> c2) (Record out) where
   getClients _ req = Record.insert name first rest
@@ -65,7 +68,7 @@ instance hasClientsAlt :: ( HasClients c1 mk1
 
 instance hasClientsNamed :: ( HasClients c mk
                           , IsSymbol name
-                          , RowCons name mk () out
+                          , Cons name mk () out
                           )
                           => HasClients (name := c) (Record out) where
   getClients _ req = Record.insert name clients {}
@@ -112,7 +115,7 @@ instance hasClientsResource :: (HasClients methods clients)
 instance hasClientsMethodAlt :: ( IsSymbol method
                                 , HasMethodClients method repr cts mk1
                                 , HasClients methods (Record mk2)
-                                , RowCons method mk1 mk2 out
+                                , Cons method mk1 mk2 out
                                 )
                                 => HasClients
                                    (Method method repr cts :<|> methods)
@@ -127,7 +130,7 @@ instance hasClientsMethodAlt :: ( IsSymbol method
 
 instance hasClientsMethod :: ( IsSymbol method
                              , HasMethodClients method repr cts mk1
-                             , RowCons method mk1 () out
+                             , Cons method mk1 () out
                              )
                              => HasClients (Method method repr cts) (Record out) where
   getClients _ req =
@@ -149,23 +152,30 @@ class HasMethodClients method repr cts client | cts -> repr, cts -> client where
 
 instance hasMethodClientMethodJson
   :: (DecodeJson r, IsSymbol method)
-  => HasMethodClients method r JSON (Aff (ajax :: AJAX | e) r) where
+  => HasMethodClients method r JSON (Aff r) where
   getMethodClients method _ req = do
     r <- toAffjaxRequest req
-         # _ { method = toMethod method }
-         # affjax
-    case decodeJson r.response of
-      Left err -> throwError (error err)
-      Right x -> pure x
+           # _ { method = toMethod method, responseFormat = AXResponseFormat.json }
+           # request
+           # map _.body
+    case r of
+      Left err -> throwError (error $ printResponseFormatError err)
+      Right json ->
+        case decodeJson json of
+          Left err -> throwError (error err)
+          Right x -> pure x
 
 instance hasMethodClientsHTMLString
   :: IsSymbol method
-  => HasMethodClients method String HTML (Aff (ajax :: AJAX | e) String) where
-  getMethodClients method _ req =
-    toAffjaxRequest req
-    # _ { method = toMethod method }
-    # affjax
-    # map _.response
+  => HasMethodClients method String HTML (Aff String) where
+  getMethodClients method _ req = do
+    r <- toAffjaxRequest req
+           # _ { method = toMethod method, responseFormat = AXResponseFormat.string }
+           # request
+           # map _.body
+    case r of
+      Left err -> throwError (error $ printResponseFormatError err)
+      Right x -> pure x
 
 asClients :: forall r mk. HasClients r mk => Proxy r -> mk
 asClients = flip getClients emptyRequestBuilder
