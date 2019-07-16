@@ -17,8 +17,6 @@ client-side application can safely request resources without having to
 duplicate routing information and JSON encoding and decoding instances.
 
 ```bash
-bower install
-(cd example && npm install)
 make run-example
 ```
 
@@ -28,6 +26,10 @@ This library's API documentation is published [on Pursuit](https://pursuit.pures
 
 ## Changelog
 
+* **0.11.0**
+  - Uddates for PureScript 0.13
+  - Various dependency upgrades
+  - Conversion to Spago as primary package manager and build tool
 * **0.10.0**
   - Added instances for `QueryParam` and `QueryParams`
 * **0.8.0**

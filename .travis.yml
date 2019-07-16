@@ -5,13 +5,19 @@ node_js: stable
 
 env:
   matrix:
-  - PATH=$HOME/purescript:$PATH
+  - PATH=$HOME:$HOME/purescript:$PATH
 
 install:
-- wget -O $HOME/purescript.tar.gz https://github.com/purescript/purescript/releases/download/v0.12.3/linux64.tar.gz
+- PURS_VER=v0.13.0
+- SPAGO_VER=0.8.5.0
+- wget -O $HOME/purescript.tar.gz https://github.com/purescript/purescript/releases/download/$PURS_VER/linux64.tar.gz
+- wget -O $HOME/spago.tar.gz https://github.com/spacchetti/spago/releases/download/0.8.5.0/linux.tar.gz
 - tar -xvf $HOME/purescript.tar.gz -C $HOME/
-- chmod a+x $HOME/purescript
-- npm install -g bower pulp@12.3.1
+- tar -xvf $HOME/spago.tar.gz -C $HOME/
+- chmod a+x $HOME/purescript/purs
+- chmod a+x $HOME/spago
+- npm install -g bower@^1.8.8 pulp@^13.0.0
+- spago install
 - bower install
 
 script:
@@ -19,9 +25,7 @@ script:
 - if [[ "$TRAVIS_PULL_REQUEST" != "false" ]]; then export VERSION=pull-request-job-$TRAVIS_JOB_NUMBER;
   fi
 - if [[ "$TRAVIS_TAG" != "" ]]; then export VERSION=$TRAVIS_TAG; fi
-- travis_wait pulp build -I example
-- travis_wait pulp test
-
-cache:
-  directories:
-  - output
+- spago build
+- spago test
+- rm -rf .spago output
+- pulp build

@@ -1,6 +1,6 @@
 .PHONY: example/public/bundle.js
 example/public/bundle.js:
-	pulp browserify -I example/src --main Client -t $@
+	spago bundle-app -p example/src/**/*.purs --main Client
 
 run-example: example/public/bundle.js
-	pulp -w run --main Server -I example/src
+	spago run -w --main Server -p example/src/**/*.purs
