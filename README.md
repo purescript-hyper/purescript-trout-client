@@ -28,6 +28,10 @@ This library's API documentation is published [on Pursuit](https://pursuit.pures
 
 ## Changelog
 
+* **0.11.0**
+  - Updates for PureScript 0.13
+  - Various dependency upgrades
+  - Migration to Spago as primary package manager / build tool
 * **0.10.0**
   - Added instances for `QueryParam` and `QueryParams`
 * **0.8.0**
