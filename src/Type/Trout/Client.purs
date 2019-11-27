@@ -9,10 +9,11 @@ module Type.Trout.Client
 import Prelude
 
 import Affjax (Request, defaultRequest, printError, request)
+import Affjax.RequestHeader (RequestHeader(..))
 import Affjax.ResponseFormat (json, string) as AXResponseFormat
 import Control.Monad.Except.Trans (throwError)
 import Data.Argonaut (class DecodeJson, decodeJson)
-import Data.Array (singleton)
+import Data.Array ((:), singleton)
 import Data.Bifunctor (rmap)
 import Data.Either (Either(..))
 import Data.Foldable (foldl)
@@ -25,16 +26,33 @@ import Effect.Aff (Aff)
 import Effect.Exception (error)
 import Prim.Row (class Cons)
 import Type.Proxy (Proxy(..))
-import Type.Trout (type (:<|>), type (:=), type (:>), Capture, CaptureAll, Lit, Method, QueryParam, QueryParams, Resource)
+import Type.Trout
+  ( type (:<|>)
+  , type (:=)
+  ,type (:>)
+  , Capture
+  , CaptureAll
+  , Header
+  , Lit
+  , Method
+  , QueryParam
+  , QueryParams
+  , Resource
+  )
 import Type.Trout.ContentType.HTML (HTML)
 import Type.Trout.ContentType.JSON (JSON)
+import Type.Trout.Header (class ToHeader, toHeader)
 import Type.Trout.PathPiece (class ToPathPiece, toPathPiece)
 import Type.Trout.Record as Record
 
-type RequestBuilder = { path :: Array String, params :: Array (Tuple String String) }
+type RequestBuilder =
+  { path :: Array String
+  , params :: Array (Tuple String String)
+  , headers :: Array RequestHeader
+  }
 
 emptyRequestBuilder :: RequestBuilder
-emptyRequestBuilder = { path: [], params: [] }
+emptyRequestBuilder = { path: [], params: [], headers: [] }
 
 appendSegment :: String -> RequestBuilder -> RequestBuilder
 appendSegment segment req =
@@ -44,8 +62,15 @@ appendQueryParam :: String -> String -> RequestBuilder -> RequestBuilder
 appendQueryParam param value req =
   req { params = req.params <> singleton (Tuple param value) }
 
+appendHeader :: String -> String -> RequestBuilder -> RequestBuilder
+appendHeader name value req =
+  req { headers = RequestHeader name value : req.headers }
+
 toAffjaxRequest :: RequestBuilder -> Request Unit
-toAffjaxRequest req = defaultRequest { url = "/" <> joinWith "/" req.path <> params }
+toAffjaxRequest req = defaultRequest
+  { url = "/" <> joinWith "/" req.path <> params
+  , headers = req.headers
+  }
   where
   params = case req.params of
     [] -> ""
@@ -106,6 +131,13 @@ instance hasClientsQueryParams :: (HasClients sub subMk, IsSymbol c, ToPathPiece
     getClients (Proxy :: Proxy sub) (foldl (flip $ appendQueryParam q) req (map toPathPiece x))
     where
     q = reflectSymbol (SProxy :: SProxy c)
+
+instance hasClientsHeader :: (HasClients sub subMk, IsSymbol n, ToHeader t)
+                             => HasClients (Header n t :> sub) (t -> subMk) where
+  getClients _ req x =
+    getClients (Proxy :: Proxy sub) $ appendHeader h (toHeader x) req
+    where
+    h = reflectSymbol (SProxy :: SProxy n)
 
 instance hasClientsResource :: (HasClients methods clients)
                               => HasClients (Resource methods) clients where
