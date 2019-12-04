@@ -8,12 +8,12 @@ module Type.Trout.Client
 
 import Prelude
 
-import Affjax (Request, defaultRequest, request)
+import Affjax (Request, defaultRequest, printError, request)
 import Affjax.ResponseFormat (json, string) as AXResponseFormat
-import Affjax.ResponseFormat (printResponseFormatError)
 import Control.Monad.Except.Trans (throwError)
 import Data.Argonaut (class DecodeJson, decodeJson)
 import Data.Array (singleton)
+import Data.Bifunctor (rmap)
 import Data.Either (Either(..))
 import Data.Foldable (foldl)
 import Data.HTTP.Method as Method
@@ -157,9 +157,9 @@ instance hasMethodClientMethodJson
     r <- toAffjaxRequest req
            # _ { method = toMethod method, responseFormat = AXResponseFormat.json }
            # request
-           # map _.body
+           # map (rmap _.body)
     case r of
-      Left err -> throwError (error $ printResponseFormatError err)
+      Left err -> throwError (error $ printError err)
       Right json ->
         case decodeJson json of
           Left err -> throwError (error err)
@@ -172,9 +172,9 @@ instance hasMethodClientsHTMLString
     r <- toAffjaxRequest req
            # _ { method = toMethod method, responseFormat = AXResponseFormat.string }
            # request
-           # map _.body
+           # map (rmap _.body)
     case r of
-      Left err -> throwError (error $ printResponseFormatError err)
+      Left err -> throwError (error $ printError err)
       Right x -> pure x
 
 asClients :: forall r mk. HasClients r mk => Proxy r -> mk
