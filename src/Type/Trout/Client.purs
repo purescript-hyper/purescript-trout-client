@@ -9,16 +9,18 @@ module Type.Trout.Client
 import Prelude
 
 import Affjax (Request, defaultRequest, printError, request)
+import Affjax.RequestBody (RequestBody, toMediaType)
+import Affjax.RequestBody (json) as AXRequestBody
 import Affjax.RequestHeader (RequestHeader(..))
 import Affjax.ResponseFormat (json, string) as AXResponseFormat
 import Control.Monad.Except.Trans (throwError)
-import Data.Argonaut (class DecodeJson, decodeJson)
+import Data.Argonaut (class DecodeJson, class EncodeJson, decodeJson, encodeJson)
 import Data.Array ((:), singleton)
 import Data.Bifunctor (rmap)
 import Data.Either (Either(..))
 import Data.Foldable (foldl)
 import Data.HTTP.Method as Method
-import Data.Maybe (Maybe)
+import Data.Maybe (Maybe(..))
 import Data.String (joinWith)
 import Data.Symbol (class IsSymbol, SProxy(..), reflectSymbol)
 import Data.Tuple (Tuple(..))
@@ -37,6 +39,7 @@ import Type.Trout
   , Method
   , QueryParam
   , QueryParams
+  , ReqBody
   , Resource
   )
 import Type.Trout.ContentType.HTML (HTML)
@@ -49,10 +52,11 @@ type RequestBuilder =
   { path :: Array String
   , params :: Array (Tuple String String)
   , headers :: Array RequestHeader
+  , content :: Maybe RequestBody
   }
 
 emptyRequestBuilder :: RequestBuilder
-emptyRequestBuilder = { path: [], params: [], headers: [] }
+emptyRequestBuilder = { path: [], params: [], headers: [], content: Nothing }
 
 appendSegment :: String -> RequestBuilder -> RequestBuilder
 appendSegment segment req =
@@ -66,10 +70,19 @@ appendHeader :: String -> String -> RequestBuilder -> RequestBuilder
 appendHeader name value req =
   req { headers = RequestHeader name value : req.headers }
 
+appendContent :: RequestBody -> RequestBuilder -> RequestBuilder
+appendContent content req = req
+  { content = Just content
+  , headers = case toMediaType content of
+                Nothing -> req.headers
+                Just mt -> ContentType mt : req.headers
+  }
+
 toAffjaxRequest :: RequestBuilder -> Request Unit
 toAffjaxRequest req = defaultRequest
   { url = "/" <> joinWith "/" req.path <> params
   , headers = req.headers
+  , content = req.content
   }
   where
   params = case req.params of
@@ -138,6 +151,11 @@ instance hasClientsHeader :: (HasClients sub subMk, IsSymbol n, ToHeader t)
     getClients (Proxy :: Proxy sub) $ appendHeader h (toHeader x) req
     where
     h = reflectSymbol (SProxy :: SProxy n)
+
+instance hasClientsReqBody :: (HasClients sub subMk, EncodeJson a)
+                              => HasClients (ReqBody a JSON :> sub) (a -> subMk) where
+  getClients _ req x =
+    getClients (Proxy :: Proxy sub) $ appendContent (AXRequestBody.json $ encodeJson x) req 
 
 instance hasClientsResource :: (HasClients methods clients)
                               => HasClients (Resource methods) clients where
