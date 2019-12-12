@@ -26,6 +26,9 @@ This library's API documentation is published [on Pursuit](https://pursuit.pures
 
 ## Changelog
 
+* **0.12.0**
+  - Added support for `ReqBody` and `Header` combinators.
+  - Various dependency upgrades
 * **0.11.0**
   - Uddates for PureScript 0.13
   - Various dependency upgrades
