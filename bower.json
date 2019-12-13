@@ -1,33 +1,27 @@
 {
-  "name": "purescript-trout-client",
-  "description": "Automatically derived XHR clients for Trout routing types.",
-  "repository": {
-    "type": "git",
-    "url": "git://github.com/owickstrom/purescript-trout-client.git"
-  },
-  "license": "MPL-2.0",
-  "ignore": [
-    "**/.*",
-    "node_modules",
-    "bower_components",
-    "output"
-  ],
-  "dependencies": {
-    "purescript-prelude": "^4.1.1",
-    "purescript-trout": "^0.12.0",
-    "purescript-affjax": "^9.0.0"
-  },
-  "devDependencies": {
-    "purescript-psci-support": "^4.0.0",
-    "purescript-jquery": "^5.0.0",
-    "purescript-hyper": "^0.10.0",
-    "purescript-hypertrout": "^0.11.0",
-    "purescript-argonaut-generic": "^5.0.0",
-    "purescript-node-http": "^5.0.1"
-  },
-  "resolutions": {
-    "purescript-typelevel-prelude": "^5.0.0",
-    "purescript-web-dom": ">= 2.0.0 < 4.0.0",
-    "purescript-web-events": "^2.0.0"
-  }
+    "name": "purescript-trout-client",
+    "license": [
+        "MPL"
+    ],
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/purescript-hyper/purescript-trout-client.git"
+    },
+    "ignore": [
+        "**/.*",
+        "node_modules",
+        "bower_components",
+        "output"
+    ],
+    "dependencies": {
+        "purescript-affjax": "^v10.0.0",
+        "purescript-argonaut-generic": "^v5.0.0",
+        "purescript-hyper": "^v0.11.0",
+        "purescript-hypertrout": "^v0.11.0",
+        "purescript-jquery": "^v5.0.0",
+        "purescript-node-http": "^v5.0.2",
+        "purescript-prelude": "^v4.1.1",
+        "purescript-psci-support": "^v4.0.0",
+        "purescript-trout": "^v0.12.2"
+    }
 }
