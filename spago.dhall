@@ -1,7 +1,7 @@
 { name =
     "trout-client"
 , license =
-    "MPL"
+    "MPL-2.0"
 , repository =
     "https://github.com/purescript-hyper/purescript-trout-client.git"
 , dependencies =
