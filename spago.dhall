@@ -1,5 +1,9 @@
 { name =
     "trout-client"
+, license =
+    "MPL"
+, repository =
+    "https://github.com/purescript-hyper/purescript-trout-client.git"
 , dependencies =
     [ "affjax"
     , "argonaut-generic"
