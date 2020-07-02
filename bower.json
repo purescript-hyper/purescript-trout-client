@@ -14,20 +14,23 @@
     "output"
   ],
   "dependencies": {
-    "purescript-affjax": "^v10.0.0",
-    "purescript-argonaut-generic": "^v5.0.0",
-    "purescript-hyper": "^v0.11.0",
+    "purescript-affjax": "^v10.1.0",
+    "purescript-argonaut-generic": "^v6.0.0",
+    "purescript-hyper": "^v0.11.1",
     "purescript-hypertrout": "^v0.11.0",
     "purescript-jquery": "^v5.0.0",
     "purescript-node-http": "^v5.0.2",
     "purescript-prelude": "^v4.1.1",
     "purescript-psci-support": "^v4.0.0",
-    "purescript-trout": "^v0.12.2"
+    "purescript-trout": "^v0.12.3"
   },
   "resolutions": {
-    "purescript-hyper": "^v0.11.0",
+    "purescript-hyper": "^v0.11.1",
     "purescript-node-buffer": "^6.0.0",
     "purescript-web-dom": "2 - 4",
-    "purescript-web-events": "^2.0.0"
+    "purescript-web-events": "^2.0.0",
+    "purescript-argonaut-codecs": "^7.0.0",
+    "purescript-argonaut": "^7.0.0",
+    "purescript-argonaut-traversals": "^8.0.0"
   }
 }
