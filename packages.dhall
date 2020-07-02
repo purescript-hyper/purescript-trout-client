@@ -1,10 +1,14 @@
-let mkPackage =
-      https://raw.githubusercontent.com/purescript/package-sets/psc-0.13.5-20191125/src/mkPackage.dhall sha256:0b197efa1d397ace6eb46b243ff2d73a3da5638d8d0ac8473e8e4a8fc528cf57
-
 let upstream =
-      https://raw.githubusercontent.com/purescript/package-sets/psc-0.13.5-20191125/src/packages.dhall sha256:650bf74df7b44b0f55a9cbd7cf35d95fb63f4110faa922567c61c7acb9581457
+      https://github.com/purescript/package-sets/releases/download/psc-0.13.8/packages.dhall sha256:0e95ec11604dc8afc1b129c4d405dcc17290ce56d7d0665a0ff15617e32bbf03
 
-let overrides = {=}
+-- These overrides can be removed when the package set is next updated.
+let overrides = 
+  { argonaut = upstream.argonaut // { version = "v7.0.0" } 
+  , argonaut-codecs = upstream.argonaut-codecs // { version = "v7.0.0" }
+  , argonaut-generic = upstream.argonaut-generic // { version = "v6.0.0" }
+  , argonaut-traversals = upstream.argonaut-traversals // { version = "v8.0.0" }
+  , trout = upstream.trout // { version = "v0.12.3" }
+  }
 
 let additions = {=}
 

@@ -14,7 +14,7 @@ import Affjax.RequestBody (json) as AXRequestBody
 import Affjax.RequestHeader (RequestHeader(..))
 import Affjax.ResponseFormat (json, string) as AXResponseFormat
 import Control.Monad.Except.Trans (throwError)
-import Data.Argonaut (class DecodeJson, class EncodeJson, decodeJson, encodeJson)
+import Data.Argonaut (class DecodeJson, class EncodeJson, decodeJson, encodeJson, printJsonDecodeError)
 import Data.Array ((:), singleton)
 import Data.Bifunctor (rmap)
 import Data.Either (Either(..))
@@ -28,20 +28,7 @@ import Effect.Aff (Aff)
 import Effect.Exception (error)
 import Prim.Row (class Cons)
 import Type.Proxy (Proxy(..))
-import Type.Trout
-  ( type (:<|>)
-  , type (:=)
-  ,type (:>)
-  , Capture
-  , CaptureAll
-  , Header
-  , Lit
-  , Method
-  , QueryParam
-  , QueryParams
-  , ReqBody
-  , Resource
-  )
+import Type.Trout (type (:<|>), type (:=), type (:>), Capture, CaptureAll, Header, Lit, Method, QueryParam, QueryParams, ReqBody, Resource)
 import Type.Trout.ContentType.HTML (HTML)
 import Type.Trout.ContentType.JSON (JSON)
 import Type.Trout.Header (class ToHeader, toHeader)
@@ -212,7 +199,7 @@ instance hasMethodClientMethodJson
       Left err -> throwError (error $ printError err)
       Right json ->
         case decodeJson json of
-          Left err -> throwError (error err)
+          Left err -> throwError (error (printJsonDecodeError err))
           Right x -> pure x
 
 instance hasMethodClientsHTMLString
