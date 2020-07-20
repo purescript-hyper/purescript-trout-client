@@ -1,7 +1,6 @@
 module Client where
 
 import Prelude hiding (div)
-import Affjax (printError)
 import Control.Monad.Except.Trans (throwError)
 import Data.Either (Either(..))
 import Data.Foldable (foldMap)
@@ -12,7 +11,7 @@ import Effect.Exception (error)
 import JQuery (body, setHtml)
 import Site (site)
 import Text.Smolder.Renderer.String (render)
-import Type.Trout.Client (asClients)
+import Type.Trout.Client (asClients, printError)
 import Type.Trout.ContentType.HTML (encodeHTML)
 
 main :: Effect Unit

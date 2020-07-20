@@ -4,29 +4,30 @@ module Type.Trout.Client
        , class HasMethodClients
        , getMethodClients
        , asClients
+       , JSONClientError(..)
+       , class ClientError
+       , printError
        ) where
 
 import Prelude
 
-import Affjax (Error, Request, defaultRequest, request)
+import Affjax (Request, defaultRequest, request)
+import Affjax (Error, printError) as Affjax
 import Affjax.RequestBody (RequestBody, toMediaType)
 import Affjax.RequestBody (json) as AXRequestBody
 import Affjax.RequestHeader (RequestHeader(..))
 import Affjax.ResponseFormat (json, string) as AXResponseFormat
-import Control.Monad.Except.Trans (throwError)
-import Data.Argonaut (class DecodeJson, class EncodeJson, decodeJson, encodeJson, printJsonDecodeError)
+import Data.Argonaut (class DecodeJson, class EncodeJson, JsonDecodeError, decodeJson, encodeJson, printJsonDecodeError)
 import Data.Array ((:), singleton)
-import Data.Bifunctor (rmap)
-import Data.Either (Either(..))
+import Data.Bifunctor (bimap, lmap, rmap)
+import Data.Either (Either)
 import Data.Foldable (foldl)
 import Data.HTTP.Method as Method
 import Data.Maybe (Maybe(..))
 import Data.String (joinWith)
 import Data.Symbol (class IsSymbol, SProxy(..), reflectSymbol)
-import Data.Traversable (for)
 import Data.Tuple (Tuple(..))
 import Effect.Aff (Aff)
-import Effect.Exception (error)
 import Prim.Row (class Cons)
 import Type.Proxy (Proxy(..))
 import Type.Trout (type (:<|>), type (:=), type (:>), Capture, CaptureAll, Header, Lit, Method, QueryParam, QueryParams, ReqBody, Resource)
@@ -184,25 +185,35 @@ toMethod :: forall m
          -> Either Method.Method Method.CustomMethod
 toMethod p = Method.fromString (reflectSymbol p)
 
+class ClientError e where
+  printError :: e -> String
 
 class HasMethodClients method repr cts client | cts -> repr, cts -> client where
   getMethodClients :: SProxy method -> Proxy cts -> RequestBuilder -> client
 
+data JSONClientError
+  = RequestError Affjax.Error
+  | DecodeError JsonDecodeError
+
+instance clientErrorJSONClientError :: ClientError JSONClientError where
+  printError (RequestError e) = Affjax.printError e
+  printError (DecodeError e) = printJsonDecodeError e
+
 instance hasMethodClientMethodJson
   :: (DecodeJson r, IsSymbol method)
-  => HasMethodClients method r JSON (Aff (Either Error r)) where
+  => HasMethodClients method r JSON (Aff (Either JSONClientError r)) where
   getMethodClients method _ req = do
-    r <- toAffjaxRequest req
-           # _ { method = toMethod method, responseFormat = AXResponseFormat.json }
-           # request
-           # map (rmap _.body)
-    for r \json -> case decodeJson json of
-      Left err -> throwError (error (printJsonDecodeError err))
-      Right x -> pure x
+    toAffjaxRequest req
+      # _ { method = toMethod method, responseFormat = AXResponseFormat.json }
+      # request
+      # map (bimap RequestError (_.body >>> decodeJson >>> lmap DecodeError) >>> join)
+
+instance clientErrorAffjaxError :: ClientError Affjax.Error where
+  printError = Affjax.printError
 
 instance hasMethodClientsHTMLString
   :: IsSymbol method
-  => HasMethodClients method String HTML (Aff (Either Error String)) where
+  => HasMethodClients method String HTML (Aff (Either Affjax.Error String)) where
   getMethodClients method _ req = do
     toAffjaxRequest req
       # _ { method = toMethod method, responseFormat = AXResponseFormat.string }
