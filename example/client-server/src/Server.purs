@@ -51,7 +51,7 @@ main =
         :*> respond "<h1>Not Found</h1>"
 
     onRoutingError status msg
-      | status == statusNotFound = fileServer "example/public" notFound
+      | status == statusNotFound = fileServer "example/client-server/public" notFound
 
       | otherwise =
         writeStatus status
