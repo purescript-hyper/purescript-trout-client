@@ -10,7 +10,7 @@ bower install --save purescript-trout-client
 
 ## Examples
 
-### [Client/Server](example/client-server)
+### [Client/Server](example/client-server/src)
 
 This example shows the integration of client and server based on a common
 [Trout](https://github.com/purescript-hyper/purescript-trout) routing type for
@@ -22,7 +22,7 @@ duplicate routing information and JSON encoding and decoding instances.
 make client-server-example
 ```
 
-### [Client Only](example/client)
+### [Client Only](example/client/src)
 
 This example demonstrates how AJAX clients can be derived from a
 [Trout](https://github.com/purescript-hyper/purescript-trout) routing type that
