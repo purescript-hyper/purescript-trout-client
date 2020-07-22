@@ -6,3 +6,4 @@
 /.psa*
 /.spago
 index.js
+bundle.js

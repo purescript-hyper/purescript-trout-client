@@ -1,4 +1,4 @@
-module Client where
+module Example.ClientServer.Client where
 
 import Prelude hiding (div)
 import Control.Monad.Except.Trans (throwError)
@@ -9,10 +9,10 @@ import Effect.Aff (launchAff)
 import Effect.Class (liftEffect)
 import Effect.Exception (error)
 import JQuery (body, setHtml)
-import Site (site)
 import Text.Smolder.Renderer.String (render)
 import Type.Trout.Client (asClients, printError)
 import Type.Trout.ContentType.HTML (encodeHTML)
+import Example.ClientServer.Site (site)
 
 main :: Effect Unit
 main = do

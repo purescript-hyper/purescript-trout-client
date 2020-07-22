@@ -1,4 +1,4 @@
-module Server where
+module Example.ClientServer.Server where
 
 import Prelude
 import Control.Monad.Error.Class (throwError)
@@ -16,7 +16,7 @@ import Hyper.Node.Server (defaultOptionsWithLogging, runServer')
 import Hyper.Response (closeHeaders, contentType, respond, writeStatus)
 import Hyper.Trout.Router (RoutingError(..), router)
 import Hyper.Status (statusNotFound)
-import Site (Task(..), TaskId, site)
+import Example.ClientServer.Site (Task(..), TaskId, site)
 
 type AppM a = ExceptT RoutingError (ReaderT (Array Task) Aff) a
 
