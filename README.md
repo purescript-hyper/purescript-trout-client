@@ -22,7 +22,7 @@ duplicate routing information and JSON encoding and decoding instances.
 make client-server-example
 ```
 
-### [Client Only](example/client/src)
+### [Client Only](example/client/src/Main.purs)
 
 This example demonstrates how AJAX clients can be derived from a
 [Trout](https://github.com/purescript-hyper/purescript-trout) routing type that
