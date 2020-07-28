@@ -1,4 +1,4 @@
-module Site where
+module Example.ClientServer.Site where
 
 import Prelude
 import Data.Argonaut.Decode (class DecodeJson)

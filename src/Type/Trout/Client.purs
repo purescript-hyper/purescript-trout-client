@@ -23,7 +23,7 @@ import Data.Bifunctor (bimap, lmap, rmap)
 import Data.Either (Either)
 import Data.Foldable (foldl)
 import Data.HTTP.Method as Method
-import Data.Maybe (Maybe(..))
+import Data.Maybe (Maybe(..), fromMaybe)
 import Data.String (joinWith)
 import Data.Symbol (class IsSymbol, SProxy(..), reflectSymbol)
 import Data.Tuple (Tuple(..))
@@ -31,6 +31,8 @@ import Effect.Aff (Aff)
 import Prim.Row (class Cons)
 import Type.Proxy (Proxy(..))
 import Type.Trout (type (:<|>), type (:=), type (:>), Capture, CaptureAll, Header, Lit, Method, QueryParam, QueryParams, ReqBody, Resource)
+import Type.Trout.Client.BaseURI (BaseURI)
+import Type.Trout.Client.BaseURI (print) as BaseURI
 import Type.Trout.ContentType.HTML (HTML)
 import Type.Trout.ContentType.JSON (JSON)
 import Type.Trout.Header (class ToHeader, toHeader)
@@ -38,14 +40,15 @@ import Type.Trout.PathPiece (class ToPathPiece, toPathPiece)
 import Type.Trout.Record as Record
 
 type RequestBuilder =
-  { path :: Array String
+  { baseURI :: Maybe BaseURI
+  , path :: Array String
   , params :: Array (Tuple String String)
   , headers :: Array RequestHeader
   , content :: Maybe RequestBody
   }
 
 emptyRequestBuilder :: RequestBuilder
-emptyRequestBuilder = { path: [], params: [], headers: [], content: Nothing }
+emptyRequestBuilder = { baseURI: Nothing, path: [], params: [], headers: [], content: Nothing }
 
 appendSegment :: String -> RequestBuilder -> RequestBuilder
 appendSegment segment req =
@@ -69,7 +72,7 @@ appendContent content req = req
 
 toAffjaxRequest :: RequestBuilder -> Request Unit
 toAffjaxRequest req = defaultRequest
-  { url = "/" <> joinWith "/" req.path <> params
+  { url = fromMaybe "/" (BaseURI.print <$> req.baseURI) <> joinWith "/" req.path <> params
   , headers = req.headers
   , content = req.content
   }
@@ -80,6 +83,12 @@ toAffjaxRequest req = defaultRequest
 
 class HasClients r mk | r -> mk where
   getClients :: Proxy r -> RequestBuilder -> mk
+
+instance hasClientsBaseURI :: ( HasClients sub subMk
+                              )
+                              => HasClients (BaseURI :> sub) (BaseURI -> subMk) where
+  getClients _ req baseURI =
+    getClients (Proxy :: Proxy sub) req { baseURI = Just baseURI }
 
 instance hasClientsAlt :: ( HasClients c1 mk1
                           , HasClients c2 (Record mk2)
