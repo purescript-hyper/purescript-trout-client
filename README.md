@@ -38,6 +38,9 @@ This library's API documentation is published [on Pursuit](https://pursuit.pures
 
 ## Changelog
 
+* **0.13.0**
+  - Typed Argonaut and Affjax errors
+  - Base URI support
 * **0.12.1**
   - Updates for new version of Argonaut
 * **0.12.0**
